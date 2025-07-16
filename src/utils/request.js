@@ -109,6 +109,19 @@ const request = {
         'Content-Type': 'application/x-www-form-urlencoded'
       }
     })
+  },postJson (url, params) {
+    return FEBS_REQUEST.post(url, params, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+  },
+  putJson (url, params) {
+    return FEBS_REQUEST.put(url, params, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
   },
   get (url, params) {
     let _params

@@ -36,6 +36,8 @@ Vue.prototype.$delete = request.delete
 Vue.prototype.$export = request.export
 Vue.prototype.$download = request.download
 Vue.prototype.$upload = request.upload
+Vue.prototype.$postJson = request.postJson
+Vue.prototype.$putJson = request.putJson
 
 /* eslint-disable no-new */
 new Vue({
