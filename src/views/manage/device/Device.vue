@@ -1,46 +1,18 @@
 <template>
   <a-card :bordered="false" class="card-area">
-    <div :class="advanced ? 'search' : null">
-      <!-- 搜索区域 -->
+    <div class="search">
       <a-form layout="horizontal">
         <a-row :gutter="15">
-          <div :class="advanced ? null: 'fold'">
-            <a-col :md="6" :sm="24">
-              <a-form-item
-                label="设备名称"
-                :labelCol="{span: 5}"
-                :wrapperCol="{span: 18, offset: 1}">
-                <a-input v-model="queryParams.name"/>
-              </a-form-item>
-            </a-col>
-            <a-col :md="6" :sm="24">
-              <a-form-item
-                label="设备类型"
-                :labelCol="{span: 5}"
-                :wrapperCol="{span: 18, offset: 1}">
-                <a-input v-model="queryParams.typeName"/>
-              </a-form-item>
-            </a-col>
-            <a-col :md="6" :sm="24">
-              <a-form-item
-                label="所属用户"
-                :labelCol="{span: 5}"
-                :wrapperCol="{span: 18, offset: 1}">
-                <a-input v-model="queryParams.userName"/>
-              </a-form-item>
-            </a-col>
-            <a-col :md="6" :sm="24">
-              <a-form-item
-                label="上下线"
-                :labelCol="{span: 5}"
-                :wrapperCol="{span: 18, offset: 1}">
-                <a-select v-model="queryParams.onlineFlag">
-                  <a-select-option value="0">否</a-select-option>
-                  <a-select-option value="1">是</a-select-option>
-                </a-select>
-              </a-form-item>
-            </a-col>
-          </div>
+          <a-col :md="6" :sm="24">
+            <a-form-item label="医院ID" :labelCol="{span: 5}" :wrapperCol="{span: 18, offset: 1}">
+              <a-input v-model="queryParams.hospitalId"/>
+            </a-form-item>
+          </a-col>
+          <a-col :md="6" :sm="24">
+            <a-form-item label="设备SN码" :labelCol="{span: 5}" :wrapperCol="{span: 18, offset: 1}">
+              <a-input v-model="queryParams.sn"/>
+            </a-form-item>
+          </a-col>
           <span style="float: right; margin-top: 3px;">
             <a-button type="primary" @click="search">查询</a-button>
             <a-button style="margin-left: 8px" @click="reset">重置</a-button>
@@ -50,343 +22,199 @@
     </div>
     <div>
       <div class="operator">
-<!--        <a-button type="primary" ghost @click="add">新增</a-button>-->
-        <a-button @click="batchDelete">删除</a-button>
+        <a-button type="primary" ghost @click="add">新增</a-button>
       </div>
-      <!-- 表格区域 -->
-      <a-table ref="TableInfo"
-               :columns="columns"
-               :rowKey="record => record.id"
-               :dataSource="dataSource"
-               :pagination="pagination"
-               :loading="loading"
-               :rowSelection="{selectedRowKeys: selectedRowKeys, onChange: onSelectChange}"
-               :scroll="{ x: 900 }"
-               @change="handleTableChange">
-        <template slot="contentShow" slot-scope="text, record">
-          <template>
-            <a-tooltip>
-              <template slot="title">
-                {{ record.remark }}
-              </template>
-              {{ record.remark.slice(0, 10) }} ...
-            </a-tooltip>
-          </template>
-        </template>
+      <a-table
+        :columns="columns"
+        :rowKey="record => record.device_id"
+        :dataSource="dataSource"
+        :pagination="pagination"
+        :loading="loading"
+        @change="handleTableChange">
         <template slot="operation" slot-scope="text, record">
-          <a-icon type="setting" theme="twoTone" twoToneColor="#4a9ff5" @click="edit(record)" title="修 改"></a-icon>
-          <a-icon v-if="record.openFlag == 0" type="caret-up" @click="audit(record.id, 1)" title="up" style="margin-left: 10px"></a-icon>
-          <a-icon v-if="record.openFlag == 1" type="caret-down" @click="audit(record.id, 0)" title="down" style="margin-left: 10px"></a-icon>
+          <a-icon type="eye" @click="handleDeviceViewOpen(record)" title="详情" style="margin-right: 10px" />
+          <a-icon type="edit" @click="edit(record)" title="编辑" style="margin-right: 10px" />
+          <a-icon type="delete" @click="remove(record)" title="删除" />
+        </template>
+        <template slot="status" slot-scope="text">
+          <a-tag v-if="text === 'online'" color="green">在线</a-tag>
+          <a-tag v-else-if="text === 'offline'" color="red">离线</a-tag>
+          <a-tag v-else-if="text === 'error'" color="orange">故障</a-tag>
+          <a-tag v-else-if="text === 'unknown'">未知</a-tag>
+          <span v-else>{{ text || '-' }}</span>
         </template>
       </a-table>
     </div>
     <device-add
       v-if="deviceAdd.visiable"
-      @close="handledeviceAddClose"
-      @success="handledeviceAddSuccess"
+      @close="handleDeviceAddClose"
+      @success="handleDeviceAddSuccess"
       :deviceAddVisiable="deviceAdd.visiable">
     </device-add>
     <device-edit
       ref="deviceEdit"
-      @close="handledeviceEditClose"
-      @success="handledeviceEditSuccess"
+      @close="handleDeviceEditClose"
+      @success="handleDeviceEditSuccess"
       :deviceEditVisiable="deviceEdit.visiable">
     </device-edit>
+    <device-view
+      @close="handleDeviceViewClose"
+      :deviceShow="deviceView.visiable"
+      :deviceData="deviceView.data">
+    </device-view>
   </a-card>
 </template>
 
 <script>
-import RangeDate from '@/components/datetime/RangeDate'
 import deviceAdd from './DeviceAdd.vue'
 import deviceEdit from './DeviceEdit.vue'
-import {mapState} from 'vuex'
-import moment from 'moment'
-moment.locale('zh-cn')
-
+import deviceView from './DeviceView.vue'
+import { hospitalDict, departmentDict } from '@/utils/dict'
 export default {
-  name: 'device',
-  components: {deviceAdd, deviceEdit, RangeDate},
+  name: 'Device',
+  components: { deviceAdd, deviceEdit, deviceView },
   data () {
     return {
-      advanced: false,
-      deviceAdd: {
-        visiable: false
-      },
-      deviceEdit: {
-        visiable: false
-      },
+      deviceAdd: { visiable: false },
+      deviceEdit: { visiable: false },
+      deviceView: { visiable: false, data: null },
       queryParams: {},
-      filteredInfo: null,
-      sortedInfo: null,
-      paginationInfo: null,
       dataSource: [],
-      selectedRowKeys: [],
       loading: false,
       pagination: {
         pageSizeOptions: ['10', '20', '30', '40', '100'],
-        defaultCurrent: 1,
-        defaultPageSize: 10,
+        current: 1,
+        pageSize: 10,
         showQuickJumper: true,
         showSizeChanger: true,
-        showTotal: (total, range) => `显示 ${range[0]} ~ ${range[1]} 条记录，共 ${total} 条记录`
+        showTotal: (total, range) => `显示 ${range[0]} ~ ${range[1]} 条记录，共 ${total} 条记录`,
+        total: 0
       },
-      userList: []
+      ws: null // WebSocket实例
     }
   },
   computed: {
-    ...mapState({
-      currentUser: state => state.account.user
-    }),
     columns () {
-      return [{
-        title: '设备编号',
-        dataIndex: 'code',
-        ellipsis: true
-      }, {
-        title: '设备名称',
-        dataIndex: 'name',
-        ellipsis: true
-      }, {
-        title: '设备在线',
-        dataIndex: 'onlineFlag',
-        customRender: (text, row, index) => {
-          switch (text) {
-            case '0':
-              return <a-tag color="red">否</a-tag>
-            case '1':
-              return <a-tag color="green">是</a-tag>
-            default:
-              return '- -'
-          }
-        }
-      }, {
-        title: '设备开关状态',
-        dataIndex: 'openFlag',
-        customRender: (text, row, index) => {
-          switch (text) {
-            case '0':
-              return <a-tag color="red">关闭</a-tag>
-            case '1':
-              return <a-tag color="green">开启</a-tag>
-            default:
-              return '- -'
-          }
-        }
-      }, {
-        title: '当前设备值',
-        dataIndex: 'deviceValue',
-        customRender: (text, row, index) => {
-          if (text !== null) {
-            return text
-          } else {
-            return '- -'
-          }
+      return [
+        { title: '设备ID', dataIndex: 'deviceId' },
+        {
+          title: '医院ID',
+          dataIndex: 'hospitalId',
+          customRender: (text) => hospitalDict[text] || text
         },
-        ellipsis: true
-      }, {
-        title: '设备类型',
-        dataIndex: 'typeName',
-        customRender: (text, row, index) => {
-          if (text !== null) {
-            return text
-          } else {
-            return '- -'
-          }
+        { title: '设备类型', dataIndex: 'deviceType' },
+        { title: 'SN码', dataIndex: 'sn' },
+        {
+          title: '状态',
+          dataIndex: 'status',
+          scopedSlots: { customRender: 'status' }
         },
-        ellipsis: true
-      }, {
-        title: '图片',
-        dataIndex: 'images',
-        customRender: (text, record, index) => {
-          if (!record.images) return <a-avatar shape="square" icon="user" />
-          return <a-popover>
-            <template slot="content">
-              <a-avatar shape="square" size={132} icon="user" src={ 'http://127.0.0.1:9527/imagesWeb/' + record.images.split(',')[0] } />
-            </template>
-            <a-avatar shape="square" icon="user" src={ 'http://127.0.0.1:9527/imagesWeb/' + record.images.split(',')[0] } />
-          </a-popover>
-        }
-      }, {
-        title: '所属用户',
-        dataIndex: 'userName',
-        customRender: (text, row, index) => {
-          if (text !== null) {
-            return text
-          } else {
-            return '- -'
-          }
-        },
-        ellipsis: true
-      }, {
-        title: '用户头像',
-        dataIndex: 'userImages',
-        customRender: (text, record, index) => {
-          if (!record.userImages) return <a-avatar shape="square" icon="user" />
-          return <a-popover>
-            <template slot="content">
-              <a-avatar shape="square" size={132} icon="user" src={ 'http://127.0.0.1:9527/imagesWeb/' + record.userImages.split(',')[0] } />
-            </template>
-            <a-avatar shape="square" icon="user" src={ 'http://127.0.0.1:9527/imagesWeb/' + record.userImages.split(',')[0] } />
-          </a-popover>
-        }
-      }, {
-        title: '创建时间',
-        dataIndex: 'createDate',
-        customRender: (text, row, index) => {
-          if (text !== null) {
-            return text
-          } else {
-            return '- -'
-          }
-        },
-        ellipsis: true
-      }, {
-        title: '操作',
-        dataIndex: 'operation',
-        scopedSlots: {customRender: 'operation'}
-      }]
+        { title: '最后心跳时间', dataIndex: 'lastHeartbeat' },
+        { title: '预留字段1', dataIndex: 'extendField1' },
+        { title: '预留字段2', dataIndex: 'extendField2' },
+        { title: '预留字段3', dataIndex: 'extendField3' },
+        { title: '操作', dataIndex: 'operation', scopedSlots: { customRender: 'operation' } }
+      ]
     }
   },
-  mounted () {
-    this.fetch()
-  },
   methods: {
-    audit (id, status) {
-      this.$get('/cos/device-info/setupOpen', {deviceId: id, openFlag: status}).then((r) => {
-        this.$message.success('修改设备成功')
-        this.search()
+    search (pageNum, pageSize) {
+      this.loading = true
+      const params = {
+        pageNum: pageNum || this.pagination.current,
+        pageSize: pageSize || this.pagination.pageSize,
+        ...this.queryParams
+      }
+      this.$get('/device/page', params).then(res => {
+        if (res && res.data) {
+          this.dataSource = res.data.records || res.data.list || []
+          this.pagination.total = res.data.total || 0
+          this.pagination.current = params.pageNum
+          this.pagination.pageSize = params.pageSize
+        }
+        this.loading = false
+      }).catch(() => {
+        this.loading = false
       })
     },
-    onSelectChange (selectedRowKeys) {
-      this.selectedRowKeys = selectedRowKeys
-    },
-    toggleAdvanced () {
-      this.advanced = !this.advanced
+    reset () {
+      this.queryParams = {}
+      this.search()
     },
     add () {
       this.deviceAdd.visiable = true
     },
-    handledeviceAddClose () {
-      this.deviceAdd.visiable = false
-    },
-    handledeviceAddSuccess () {
-      this.deviceAdd.visiable = false
-      this.$message.success('新增设备成功')
-      this.search()
-    },
-    edit (record) {
-      this.$refs.deviceEdit.setFormValues(record)
+    edit (row) {
+      this.$refs.deviceEdit.setFormValues(row)
       this.deviceEdit.visiable = true
     },
-    handledeviceEditClose () {
-      this.deviceEdit.visiable = false
+    remove (row) {},
+    handleTableChange () {},
+    handleDeviceAddClose () {
+      this.deviceAdd.visiable = false
     },
-    handledeviceEditSuccess () {
-      this.deviceEdit.visiable = false
-      this.$message.success('修改设备成功')
+    handleDeviceAddSuccess () {
+      this.deviceAdd.visiable = false
       this.search()
     },
-    handleDeptChange (value) {
-      this.queryParams.deptId = value || ''
+    handleDeviceEditClose () {
+      this.deviceEdit.visiable = false
     },
-    batchDelete () {
-      if (!this.selectedRowKeys.length) {
-        this.$message.warning('请选择需要删除的记录')
-        return
-      }
-      let that = this
-      this.$confirm({
-        title: '确定删除所选中的记录?',
-        content: '当您点击确定按钮后，这些记录将会被彻底删除',
-        centered: true,
-        onOk () {
-          let ids = that.selectedRowKeys.join(',')
-          that.$delete('/cos/device-info/' + ids).then(() => {
-            that.$message.success('删除成功')
-            that.selectedRowKeys = []
-            that.search()
-          })
-        },
-        onCancel () {
-          that.selectedRowKeys = []
+    handleDeviceEditSuccess () {
+      this.deviceEdit.visiable = false
+      this.search()
+    },
+    handleDeviceViewOpen (row) {
+      this.deviceView.data = row
+      this.deviceView.visiable = true
+    },
+    handleDeviceViewClose () {
+      this.deviceView.visiable = false
+    },
+    initWebSocket() {
+    
+      this.ws = new WebSocket('ws://127.0.0.1:9527/ws/device');
+      this.ws.onopen = () => {
+        console.log('WebSocket 连接已建立');
+      };
+      this.ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.deviceId && data.status) {
+            const device = this.dataSource.find(d => d.deviceId === data.deviceId);
+            if (device) {
+              this.$set(device, 'status', data.status);
+            }
+          }
+        } catch (e) {
+          console.warn('WebSocket消息解析失败', e);
         }
-      })
-    },
-    search () {
-      let {sortedInfo, filteredInfo} = this
-      let sortField, sortOrder
-      // 获取当前列的排序和列的过滤规则
-      if (sortedInfo) {
-        sortField = sortedInfo.field
-        sortOrder = sortedInfo.order
-      }
-      this.fetch({
-        sortField: sortField,
-        sortOrder: sortOrder,
-        ...this.queryParams,
-        ...filteredInfo
-      })
-    },
-    reset () {
-      // 取消选中
-      this.selectedRowKeys = []
-      // 重置分页
-      this.$refs.TableInfo.pagination.current = this.pagination.defaultCurrent
-      if (this.paginationInfo) {
-        this.paginationInfo.current = this.pagination.defaultCurrent
-        this.paginationInfo.pageSize = this.pagination.defaultPageSize
-      }
-      // 重置列过滤器规则
-      this.filteredInfo = null
-      // 重置列排序规则
-      this.sortedInfo = null
-      // 重置查询参数
-      this.queryParams = {}
-      this.fetch()
-    },
-    handleTableChange (pagination, filters, sorter) {
-      // 将这三个参数赋值给Vue data，用于后续使用
-      this.paginationInfo = pagination
-      this.filteredInfo = filters
-      this.sortedInfo = sorter
-
-      this.fetch({
-        sortField: sorter.field,
-        sortOrder: sorter.order,
-        ...this.queryParams,
-        ...filters
-      })
-    },
-    fetch (params = {}) {
-      // 显示loading
-      this.loading = true
-      if (this.paginationInfo) {
-        // 如果分页信息不为空，则设置表格当前第几页，每页条数，并设置查询分页参数
-        this.$refs.TableInfo.pagination.current = this.paginationInfo.current
-        this.$refs.TableInfo.pagination.pageSize = this.paginationInfo.pageSize
-        params.size = this.paginationInfo.pageSize
-        params.current = this.paginationInfo.current
-      } else {
-        // 如果分页信息为空，则设置为默认值
-        params.size = this.pagination.defaultPageSize
-        params.current = this.pagination.defaultCurrent
-      }
-      this.$get('/cos/device-info/page', {
-        ...params
-      }).then((r) => {
-        let data = r.data.data
-        const pagination = {...this.pagination}
-        pagination.total = data.total
-        this.dataSource = data.records
-        this.pagination = pagination
-        // 数据加载完毕，关闭loading
-        this.loading = false
-      })
+      };
+      this.ws.onclose = () => {
+        console.log('WebSocket 连接已关闭');
+      };
+      this.ws.onerror = (err) => {
+        console.error('WebSocket 发生错误', err);
+      };
     }
   },
-  watch: {}
+  mounted () {
+    this.search();
+    this.initWebSocket();
+  },
+  beforeDestroy() {
+    if (this.ws) {
+      this.ws.close();
+    }
+  }
 }
 </script>
-<style lang="less" scoped>
-@import "../../../../static/less/Common";
+
+<style scoped>
+.card-area {
+  margin: 24px;
+}
+.operator {
+  margin-bottom: 16px;
+}
 </style>

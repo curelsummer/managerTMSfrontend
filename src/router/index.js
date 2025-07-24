@@ -105,6 +105,12 @@ function view (path) {
   return function (resolve) {
     import(`@/views/${path}.vue`).then(mod => {
       resolve(mod)
+    }).catch(err => {
+      console.error(`Failed to load component: @/views/${path}.vue`, err)
+      // 尝试使用默认的错误页面或者返回一个简单的组件
+      resolve({
+        template: '<div>页面加载失败，请检查路由配置</div>'
+      })
     })
   }
 }

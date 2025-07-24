@@ -18,6 +18,13 @@
           </a-col>
           <a-col :span="8"><b>出生日期：</b>{{ patientData.birthday }}</a-col>
           <a-col :span="8"><b>患者唯一码：</b>{{ patientData.code }}</a-col>
+          <a-col :span="8"><b>状态：</b>
+            <a-tag v-if="patientData.status === 'online'" color="green">在线</a-tag>
+            <a-tag v-else-if="patientData.status === 'offline'" color="red">离线</a-tag>
+            <a-tag v-else-if="patientData.status === 'error'" color="orange">故障</a-tag>
+            <a-tag v-else-if="patientData.status === 'unknown'">未知</a-tag>
+            <span v-else>{{ patientData.status || '-' }}</span>
+          </a-col>
         </a-row>
       </div>
     </a-modal>
@@ -25,6 +32,7 @@
   
   <script>
   import moment from 'moment'
+  import { hospitalDict, departmentDict } from '@/utils/dict'
   export default {
     name: 'PatientView',
     props: {
@@ -38,14 +46,8 @@
     },
     data() {
       return {
-        hospitalDict: {
-          1: "协和医院",
-          2: "人民医院"
-        },
-        departmentDict: {
-          1: "内科",
-          2: "外科"
-        }
+        hospitalDict,
+        departmentDict
       }
     },
     computed: {

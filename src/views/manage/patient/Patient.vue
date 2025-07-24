@@ -31,6 +31,13 @@
           :pagination="pagination"
           :loading="loading"
           @change="handleTableChange">
+          <template slot="status" slot-scope="text">
+            <a-tag v-if="text === 'online'" color="green">在线</a-tag>
+            <a-tag v-else-if="text === 'offline'" color="red">离线</a-tag>
+            <a-tag v-else-if="text === 'error'" color="orange">故障</a-tag>
+            <a-tag v-else-if="text === 'unknown'">未知</a-tag>
+            <span v-else>{{ text || '-' }}</span>
+          </template>
           <template slot="operation" slot-scope="text, record">
             <a-icon type="eye" @click="handlePatientViewOpen(record)" title="详情" style="margin-right: 10px" />
             <a-icon type="edit" @click="edit(record)" title="编辑" style="margin-right: 10px" />
@@ -62,15 +69,7 @@
   import patientAdd from './PatientAdd.vue'
   import patientEdit from './PatientEdit.vue'
   import patientView from './PatientView.vue'
-  
-  const hospitalDict = {
-    1: "协和医院",
-    2: "人民医院"
-  }
-  const departmentDict = {
-    1: "内科",
-    2: "外科"
-  }
+  import { hospitalDict, departmentDict } from '@/utils/dict'
 
   export default {
     name: 'Patient',
@@ -115,6 +114,11 @@
           },
           { title: '出生日期', dataIndex: 'birthday' },
           { title: '患者唯一码', dataIndex: 'code' },
+          {
+            title: '状态',
+            dataIndex: 'status',
+            scopedSlots: { customRender: 'status' }
+          },
           { title: '操作', dataIndex: 'operation', scopedSlots: { customRender: 'operation' } }
         ]
       }
