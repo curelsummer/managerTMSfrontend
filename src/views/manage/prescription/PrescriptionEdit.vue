@@ -23,7 +23,7 @@
         </a-col>
         <a-col :span="8">
           <a-form-item label='处方类型'>
-            <a-select v-decorator="['presType', { rules: [{ required: true, message: '请选择处方类型!' }] }]">
+            <a-select v-decorator="['presType', { rules: [{ required: true, message: '请选择处方类型!' }] }]" @change="onPresTypeChange">
               <a-select-option value="0">普通处方</a-select-option>
               <a-select-option value="1">TBS处方</a-select-option>
             </a-select>
@@ -104,7 +104,7 @@
         </a-col>
         <a-col :span="8">
           <a-form-item label='TBS类型'>
-            <a-select v-decorator="['tbsType']" @change="onTBSTypeChange">
+            <a-select v-decorator="['tbsType']" @change="onTBSTypeChange" :disabled="!isTBSMode">
               <a-select-option value="0">iTBS</a-select-option>
               <a-select-option value="1">cTBS</a-select-option>
             </a-select>
@@ -148,7 +148,7 @@
 
 <script>
 import { getStimulationSiteOptions } from '@/utils/dict'
-import { validatePrescription, calculateRTMSTotalCount, calculateTBSTotalCount, getTBSDefaultParams } from '@/utils/prescriptionValidator'
+import { validatePrescription, calculateRTMSTotalCount, calculateTBSTotalCount, getTBSDefaultParams, getTBSCompliantParams } from '@/utils/prescriptionValidator'
 
 export default {
   name: 'PrescriptionEdit',
@@ -171,7 +171,8 @@ export default {
       loading: false,
       rowId: null,
       selectedStandardPrescriptionName: '',
-      stimulationSiteOptions: []
+      stimulationSiteOptions: [],
+      isTBSMode: false // 是否为TBS模式
     }
   },
   async mounted () {
@@ -187,14 +188,17 @@ export default {
       let obj = {}
       let fields = [
         'patientId', 'hospitalId', 'doctorId', 'presType', 'presStrength', 
-        'presFreq', 'lastTime', 'pauseTime', 'repeatCount', 'totalCount', 
+        'presFreq', 'lastTime', 'pauseTime', 'repeatCount', 'periods', 'totalCount', 
         'totalTime', 'presPartId', 'presPartName', 'standardPresName', 'tbsType', 
-        'innerPulseCount', 'outerFreq', 'status'
+        'innerFreq', 'innerCount', 'interFreq', 'interCount', 'status'
       ]
       fields.forEach(key => {
         obj[key] = row[key]
       })
       this.form.setFieldsValue(obj)
+      
+      // 设置模式状态
+      this.isTBSMode = parseInt(row.presType) === 1
       
       // 设置标准处方名称显示
       this.selectedStandardPrescriptionName = row.standardPresName || ''
@@ -235,9 +239,12 @@ export default {
             repeatCount: parseInt(values.repeatCount),
             totalCount: parseInt(values.totalCount),
             totalTime: parseInt(values.totalTime),
-            tbsType: values.tbsType !== null && values.tbsType !== undefined ? parseInt(values.tbsType) : null,
-            innerPulseCount: values.innerPulseCount !== null && values.innerPulseCount !== undefined ? parseInt(values.innerPulseCount) : null,
-            outerFreq: values.outerFreq !== null && values.outerFreq !== undefined ? parseFloat(values.outerFreq) : null,
+                      tbsType: values.tbsType !== null && values.tbsType !== undefined ? parseInt(values.tbsType) : null,
+          innerFreq: values.innerFreq !== null && values.innerFreq !== undefined ? parseFloat(values.innerFreq) : null,
+          innerCount: values.innerCount !== null && values.innerCount !== undefined ? parseInt(values.innerCount) : null,
+          interFreq: values.interFreq !== null && values.interFreq !== undefined ? parseFloat(values.interFreq) : null,
+          interCount: values.interCount !== null && values.interCount !== undefined ? parseInt(values.interCount) : null,
+          periods: values.periods !== null && values.periods !== undefined ? parseInt(values.periods) : 1,
             status: parseInt(values.status)
           }
           
@@ -298,10 +305,36 @@ export default {
         this.autoCalculateTotalCount()
       }, 500) // 每500ms检查一次
     },
+    onPresTypeChange (value) {
+      const presType = parseInt(value)
+      this.isTBSMode = presType === 1
+      
+      if (presType === 0) {
+        // 普通处方模式：清空TBS相关字段
+        this.form.setFieldsValue({
+          tbsType: null,
+          innerFreq: null,
+          innerCount: null,
+          interFreq: null,
+          interCount: null
+        })
+      } else if (presType === 1) {
+        // TBS模式：设置默认TBS类型为iTBS，并设置符合验证规则的默认参数
+        this.form.setFieldsValue({
+          tbsType: 0
+        })
+        // 设置符合TBS验证规则的默认参数
+        const compliantParams = getTBSCompliantParams(0)
+        this.form.setFieldsValue(compliantParams)
+      }
+      
+      // 重新计算总脉冲数
+      this.autoCalculateTotalCount()
+    },
     onTBSTypeChange (value) {
-      // 根据TBS类型设置固定参数
-      const tbsParams = getTBSDefaultParams(parseInt(value))
-      this.form.setFieldsValue(tbsParams)
+      // 根据TBS类型设置符合验证规则的参数
+      const compliantParams = getTBSCompliantParams(parseInt(value))
+      this.form.setFieldsValue(compliantParams)
       // 重新计算总脉冲数
       this.autoCalculateTotalCount()
     },

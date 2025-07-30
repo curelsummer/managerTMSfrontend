@@ -44,7 +44,7 @@
       <br/>
       <a-row style="padding-left: 24px;padding-right: 24px;">
         <a-col :span="8"><b>总时间(秒)：</b>{{ prescriptionData.totalTime }}</a-col>
-        <a-col :span="8"><b>治疗部位：</b>{{ getStimulationSiteName(prescriptionData.presPartId) }}</a-col>
+        <a-col :span="8"><b>治疗部位：</b>{{ prescriptionData.presPartName || '-' }}</a-col>
         <a-col :span="8"><b>标准处方：</b>{{ prescriptionData.standardPresName || '-' }}</a-col>
       </a-row>
       <br/>
@@ -77,7 +77,7 @@
 </template>
 
 <script>
-import { hospitalDict, getStimulationSiteName } from '@/utils/dict'
+import { hospitalDict } from '@/utils/dict'
 export default {
   name: 'PrescriptionView',
   props: {

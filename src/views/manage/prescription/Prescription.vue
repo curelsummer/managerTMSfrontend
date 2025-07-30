@@ -79,8 +79,8 @@
             </a-button>
           </a-dropdown>
         </div>
-        <div style="margin-bottom: 16px; color: #666; font-size: 12px;">
-          <a-icon type="info-circle" /> 点击"展开"按钮可查看和编辑详细的处方参数信息
+        <div style="margin-bottom: 16px; color: #1890ff; font-size: 13px; font-weight: 500; background: #f0f8ff; padding: 8px 12px; border-radius: 4px; border-left: 4px solid #1890ff;">
+          <a-icon type="info-circle" style="color: #1890ff; margin-right: 6px;" /> 点击表格中的 <a-icon type="down" style="color: #1890ff;" /> 箭头图标可展开查看和编辑详细的处方参数
         </div>
       <a-table
         :columns="columns"
@@ -89,7 +89,7 @@
         :pagination="pagination"
         :loading="loading"
         :rowSelection="rowSelection"
-        :scroll="{ x: 1000 }"
+        :scroll="{ x: 1300 }"
         @change="handleTableChange">
         <template slot="expand" slot-scope="text, record">
           <a-button 
@@ -97,20 +97,23 @@
             size="small" 
             @click="toggleExpand(record)"
             :icon="record.expanded ? 'up' : 'down'"
-          >
-            {{ record.expanded ? '收起详情' : '展开详情' }}
-          </a-button>
+            style="padding: 0; height: auto; min-width: auto;"
+            :title="record.expanded ? '收起详情' : '展开详情'"
+          />
         </template>
         
         <template slot="operation" slot-scope="text, record">
-          <a-icon type="eye" @click="handlePrescriptionViewOpen(record)" title="详情" style="margin-right: 10px" />
-          <a-icon type="save" @click="saveRow(record)" title="保存" style="margin-right: 10px" v-if="record.editing" />
-          <a-icon type="close" @click="cancelEdit(record)" title="取消" style="margin-right: 10px" v-if="record.editing" />
-          <a-icon type="edit" @click="startEdit(record)" title="编辑" style="margin-right: 10px" v-if="!record.editing" />
+          <a-icon type="eye" @click="handlePrescriptionViewOpen(record)" title="详情" style="margin-right: 8px" />
+          <a-icon type="save" @click="saveRow(record)" title="保存" style="margin-right: 8px" v-if="record.editing" />
+          <a-icon type="close" @click="cancelEdit(record)" title="取消" style="margin-right: 8px" v-if="record.editing" />
+          <a-icon type="edit" @click="startEdit(record)" title="编辑" style="margin-right: 8px" v-if="!record.editing" />
+          <a-button type="link" size="small" @click="handlePrescriptionDispatch(record)" title="下发" style="padding: 0; height: auto; color: #1890ff; margin-right: 8px;">
+            下发
+          </a-button>
           <a-icon type="delete" @click="remove(record)" title="删除" />
         </template>
         <template slot="presType" slot-scope="text, record">
-          <a-select v-if="record.editing" v-model="record.presType" size="small" style="width: 100%">
+          <a-select v-if="record.editing" v-model="record.presType" size="small" style="width: 100%" @change="onPresTypeChange(record, $event)">
             <a-select-option value="0">普通处方</a-select-option>
             <a-select-option value="1">TBS处方</a-select-option>
           </a-select>
@@ -360,7 +363,7 @@
               </div>
             </a-col>
             
-            <a-col :span="8">
+            <a-col :span="8" v-if="parseInt(record.presType) === 1">
               <h4>TBS参数</h4>
               <div class="param-item">
                 <label>TBS类型：</label>
@@ -466,6 +469,20 @@
       @openStandardPrescriptionModal="handleOpenStandardPrescriptionModal"
       :prescriptionEditVisiable="prescriptionEdit.visiable">
     </prescription-edit>
+    
+    <!-- 患者选择弹窗 -->
+    <patient-select-modal
+      :visible="patientSelectModal.visible"
+      @patientSelected="handlePatientSelected"
+      @cancel="handlePatientSelectCancel"
+    />
+    
+    <!-- 设备选择弹窗 -->
+    <device-select-modal
+      :visible="deviceSelectModal.visible"
+      @deviceSelected="handleDeviceSelected"
+      @cancel="handleDeviceSelectCancel"
+    />
   </a-card>
 </template>
 
@@ -474,17 +491,24 @@ import prescriptionAdd from './PrescriptionAdd.vue'
 import prescriptionEdit from './PrescriptionEdit.vue'
 import prescriptionView from './PrescriptionView.vue'
 import StandardPrescriptionModal from './StandardPrescriptionModal.vue'
+import PatientSelectModal from './PatientSelectModal.vue'
+import DeviceSelectModal from './DeviceSelectModal.vue'
 import { hospitalDict, getStimulationSiteName, loadStimulationSiteData, getStimulationSiteOptions } from '@/utils/dict'
-import { validatePrescription, calculateRTMSTotalCount, calculateTBSTotalCount, getTBSDefaultParams } from '@/utils/prescriptionValidator'
+import { validatePrescription, calculateRTMSTotalCount, calculateTBSTotalCount, getTBSDefaultParams, getTBSCompliantParams } from '@/utils/prescriptionValidator'
 export default {
   name: 'Prescription',
-  components: { prescriptionAdd, prescriptionEdit, prescriptionView, StandardPrescriptionModal },
+  components: { prescriptionAdd, prescriptionEdit, prescriptionView, StandardPrescriptionModal, PatientSelectModal, DeviceSelectModal },
   data () {
     return {
       prescriptionAdd: { visiable: false },
       prescriptionEdit: { visiable: false },
       prescriptionView: { visiable: false, data: null },
       standardPrescriptionModal: { visible: false },
+      patientSelectModal: { visible: false },
+      deviceSelectModal: { visible: false },
+      currentDispatchPrescription: null, // 当前要下发的处方
+      selectedPatient: null, // 选中的患者
+      selectedDevice: null, // 选中的设备
       currentEditingRow: null, // 当前正在编辑的行
       queryParams: {},
       dataSource: [],
@@ -509,54 +533,54 @@ export default {
         { 
           title: '展开', 
           dataIndex: 'expand', 
-          width: 60,
+          width: 40,
           scopedSlots: { customRender: 'expand' }
         },
         { title: '处方ID', dataIndex: 'id', width: 80 },
         { 
           title: '患者ID', 
           dataIndex: 'patientId',
-          width: 100,
+          width: 80,
           scopedSlots: { customRender: 'patientId' }
         },
         {
           title: '医院',
           dataIndex: 'hospitalId',
-          width: 120,
+          width: 100,
           scopedSlots: { customRender: 'hospitalId' }
         },
         { 
           title: '医生ID', 
           dataIndex: 'doctorId',
-          width: 100,
+          width: 80,
           scopedSlots: { customRender: 'doctorId' }
         },
         {
           title: '处方类型',
           dataIndex: 'presType',
-          width: 100,
+          width: 90,
           scopedSlots: { customRender: 'presType' }
         },
         { 
           title: '治疗部位', 
           dataIndex: 'presPartName',
-          width: 150,
+          width: 120,
           scopedSlots: { customRender: 'presPartName' }
         },
         {
           title: '标准处方',
           dataIndex: 'standardPresName',
-          width: 150,
+          width: 120,
           scopedSlots: { customRender: 'standardPresName' }
         },
         {
           title: '状态',
           dataIndex: 'status',
-          width: 100,
+          width: 80,
           scopedSlots: { customRender: 'status' }
         },
-        { title: '创建时间', dataIndex: 'createTime', width: 150 },
-        { title: '操作', dataIndex: 'operation', width: 120, fixed: 'right', scopedSlots: { customRender: 'operation' } }
+        { title: '创建时间', dataIndex: 'createTime', width: 120 },
+        { title: '操作', dataIndex: 'operation', width: 220, fixed: 'right', scopedSlots: { customRender: 'operation' } }
       ]
     },
     rowSelection () {
@@ -581,12 +605,13 @@ export default {
           this.pagination.current = params.pageNum
           this.pagination.pageSize = params.pageSize
           
-          // 调试：检查TBS类型数据
+          // 调试：检查数据状态
           if (this.dataSource.length > 0) {
-            console.log('加载的数据中TBS类型示例:', this.dataSource.map(item => ({
+            console.log('加载的处方数据状态示例:', this.dataSource.map(item => ({
               id: item.id,
-              tbsType: item.tbsType,
-              tbsTypeType: typeof item.tbsType
+              status: item.status,
+              statusType: typeof item.status,
+              editing: item.editing
             })))
           }
         }
@@ -609,6 +634,16 @@ export default {
       row.originalData = { ...row }
       this.$set(row, 'editing', true)
       this.currentEditingRow = row
+      
+      // 如果是普通处方模式，确保TBS字段为空
+      if (parseInt(row.presType) === 0) {
+        this.$set(row, 'tbsType', null)
+        this.$set(row, 'innerFreq', null)
+        this.$set(row, 'innerCount', null)
+        this.$set(row, 'interFreq', null)
+        this.$set(row, 'interCount', null)
+        this.$set(row, 'periods', 1)
+      }
     },
     saveRow (row) {
       console.log('保存行数据，原始TBS类型:', row.tbsType, '类型:', typeof row.tbsType)
@@ -838,21 +873,26 @@ export default {
     },
     getValidationMessage (record) {
       try {
+        const presType = parseInt(record.presType)
         const validationData = {
-          presType: parseInt(record.presType),
+          presType: presType,
           presStrength: parseFloat(record.presStrength),
           presFreq: parseFloat(record.presFreq),
           lastTime: parseFloat(record.lastTime),
-                  pauseTime: parseInt(record.pauseTime),
-        repeatCount: parseInt(record.repeatCount),
-        periods: parseInt(record.periods) || 1,
-        totalCount: parseInt(record.totalCount),
-        tbsType: record.tbsType !== null && record.tbsType !== undefined ? parseInt(record.tbsType) : null,
-        innerFreq: record.innerFreq !== null && record.innerFreq !== undefined ? parseFloat(record.innerFreq) : 0,
-        innerCount: record.innerCount !== null && record.innerCount !== undefined ? parseInt(record.innerCount) : 0,
-        interFreq: record.interFreq !== null && record.interFreq !== undefined ? parseFloat(record.interFreq) : 0,
-        interCount: record.interCount !== null && record.interCount !== undefined ? parseInt(record.interCount) : 0,
-        presPartName: this.getStimulationSiteName(record.presPartId)
+          pauseTime: parseInt(record.pauseTime),
+          repeatCount: parseInt(record.repeatCount),
+          periods: parseInt(record.periods) || 1,
+          totalCount: parseInt(record.totalCount),
+          presPartName: this.getStimulationSiteName(record.presPartId)
+        }
+        
+        // 只有TBS模式才添加TBS相关字段
+        if (presType === 1) {
+          validationData.tbsType = record.tbsType !== null && record.tbsType !== undefined ? parseInt(record.tbsType) : null
+          validationData.innerFreq = record.innerFreq !== null && record.innerFreq !== undefined ? parseFloat(record.innerFreq) : 0
+          validationData.innerCount = record.innerCount !== null && record.innerCount !== undefined ? parseInt(record.innerCount) : 0
+          validationData.interFreq = record.interFreq !== null && record.interFreq !== undefined ? parseFloat(record.interFreq) : 0
+          validationData.interCount = record.interCount !== null && record.interCount !== undefined ? parseInt(record.interCount) : 0
         }
         
         const validation = validatePrescription(validationData, this.stimulationSiteOptions.map(option => option.label))
@@ -888,11 +928,36 @@ export default {
         record.totalCount = calculatedCount
       }
     },
+    onPresTypeChange (record, value) {
+      const presType = parseInt(value)
+      
+      if (presType === 0) {
+        // 普通处方模式：清空TBS相关字段
+        this.$set(record, 'tbsType', null)
+        this.$set(record, 'innerFreq', null)
+        this.$set(record, 'innerCount', null)
+        this.$set(record, 'interFreq', null)
+        this.$set(record, 'interCount', null)
+        // 设置周期数为1（普通处方默认值）
+        this.$set(record, 'periods', 1)
+      } else if (presType === 1) {
+        // TBS模式：设置默认TBS类型为iTBS，并设置符合验证规则的默认参数
+        this.$set(record, 'tbsType', 0)
+        // 获取符合TBS验证规则的默认参数
+        const compliantParams = getTBSCompliantParams(0)
+        Object.keys(compliantParams).forEach(key => {
+          this.$set(record, key, compliantParams[key])
+        })
+      }
+      
+      // 重新计算总脉冲数
+      this.autoCalculateTotalCount(record)
+    },
     onTBSTypeChange (record, value) {
-      // 根据TBS类型设置固定参数
-      const tbsParams = getTBSDefaultParams(parseInt(value))
-      Object.keys(tbsParams).forEach(key => {
-        this.$set(record, key, tbsParams[key])
+      // 根据TBS类型设置符合验证规则的参数
+      const compliantParams = getTBSCompliantParams(parseInt(value))
+      Object.keys(compliantParams).forEach(key => {
+        this.$set(record, key, compliantParams[key])
       })
       // 重新计算总脉冲数
       this.autoCalculateTotalCount(record)
@@ -903,6 +968,126 @@ export default {
       if (calculatedCount > 0) {
         this.$set(record, 'totalCount', calculatedCount)
       }
+    },
+    
+    // 处方下发相关方法
+    handlePrescriptionDispatch (record) {
+      this.currentDispatchPrescription = record
+      this.patientSelectModal.visible = true
+    },
+    
+    // 患者选择完成
+    handlePatientSelected (patient) {
+      this.selectedPatient = patient
+      this.patientSelectModal.visible = false
+      
+      // 更新处方表中的患者ID
+      this.currentDispatchPrescription.patientId = patient.id
+      
+      // 显示设备选择弹窗
+      this.deviceSelectModal.visible = true
+    },
+    
+    // 设备选择完成
+    async handleDeviceSelected (device) {
+      this.selectedDevice = device
+      this.deviceSelectModal.visible = false
+      
+      try {
+        // 1. 更新prescription表中的患者ID和设备ID
+        const prescriptionUpdateData = {
+          id: this.currentDispatchPrescription.id,
+          patientId: this.selectedPatient.id,
+          deviceId: device.deviceId,
+          status: 1, // 处方状态设为已下发
+          // 保持其他字段不变
+          hospitalId: this.currentDispatchPrescription.hospitalId,
+          doctorId: this.currentDispatchPrescription.doctorId,
+          presType: this.currentDispatchPrescription.presType,
+          presStrength: this.currentDispatchPrescription.presStrength,
+          presFreq: this.currentDispatchPrescription.presFreq,
+          lastTime: this.currentDispatchPrescription.lastTime,
+          pauseTime: this.currentDispatchPrescription.pauseTime,
+          repeatCount: this.currentDispatchPrescription.repeatCount,
+          totalCount: this.currentDispatchPrescription.totalCount,
+          totalTime: this.currentDispatchPrescription.totalTime,
+          presPartId: this.currentDispatchPrescription.presPartId,
+          presPartName: this.currentDispatchPrescription.presPartName,
+          standardPresId: this.currentDispatchPrescription.standardPresId,
+          standardPresName: this.currentDispatchPrescription.standardPresName,
+          tbsType: this.currentDispatchPrescription.tbsType,
+          innerFreq: this.currentDispatchPrescription.innerFreq,
+          innerCount: this.currentDispatchPrescription.innerCount,
+          interFreq: this.currentDispatchPrescription.interFreq,
+          interCount: this.currentDispatchPrescription.interCount,
+          periods: this.currentDispatchPrescription.periods,
+          createdBy: this.currentDispatchPrescription.createdBy,
+          updatedBy: this.currentDispatchPrescription.doctorId
+        }
+        
+        await this.$putJson('/prescription', prescriptionUpdateData)
+        
+        // 2. 创建prescription_execution记录，状态设为0（待下发）
+        const executionData = {
+          patientId: this.selectedPatient.id,
+          deviceId: device.deviceId,
+          prescriptionId: this.currentDispatchPrescription.id,
+          status: 0, // 待下发
+          progress: '处方已创建，等待下发'
+        }
+        
+        const res = await this.$postJson('/prescription-execution', executionData)
+        console.log('处方执行记录创建响应:', res)
+        
+        // 处理嵌套在data字段中的响应
+        const responseData = res.data || res
+        
+        if (responseData && responseData.success === true) {
+          this.$message.success('处方下发成功！')
+          // 跳转到处方执行页面
+          console.log('当前路由信息:', this.$route)
+          console.log('尝试跳转到处方执行页面')
+          
+          // 检查所有可用路由
+          console.log('所有路由:', this.$router.getRoutes())
+          
+          // 尝试跳转到处方执行页面
+          this.$router.push('/manage/prescriptionexecution').then(() => {
+            console.log('跳转成功，刷新页面')
+            // 跳转成功后刷新页面
+            window.location.reload()
+          }).catch(err => {
+            console.error('跳转失败:', err)
+            this.$message.warning('跳转失败，请手动导航到处方执行页面')
+          })
+        } else {
+          const errorMsg = responseData && responseData.message ? responseData.message : '未知错误'
+          this.$message.error('处方下发失败：' + errorMsg)
+        }
+      } catch (error) {
+        console.error('处方下发失败:', error)
+        this.$message.error('处方下发失败：' + (error.message || '网络错误'))
+      }
+      
+      // 清空选择状态
+      this.currentDispatchPrescription = null
+      this.selectedPatient = null
+      this.selectedDevice = null
+    },
+    
+    // 取消患者选择
+    handlePatientSelectCancel () {
+      this.patientSelectModal.visible = false
+      this.currentDispatchPrescription = null
+      this.selectedPatient = null
+    },
+    
+    // 取消设备选择
+    handleDeviceSelectCancel () {
+      this.deviceSelectModal.visible = false
+      this.currentDispatchPrescription = null
+      this.selectedPatient = null
+      this.selectedDevice = null
     }
   },
   async mounted () {

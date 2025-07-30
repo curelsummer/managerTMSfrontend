@@ -23,7 +23,7 @@
         </a-col>
         <a-col :span="8">
           <a-form-item label='处方类型'>
-            <a-select v-decorator="['presType', { initialValue: 0, rules: [{ required: true, message: '请选择处方类型!' }] }]">
+            <a-select v-decorator="['presType', { initialValue: 0, rules: [{ required: true, message: '请选择处方类型!' }] }]" @change="onPresTypeChange">
               <a-select-option value="0">普通处方</a-select-option>
               <a-select-option value="1">TBS处方</a-select-option>
             </a-select>
@@ -104,7 +104,7 @@
           </a-col>
         <a-col :span="8">
           <a-form-item label='TBS类型'>
-            <a-select v-decorator="['tbsType', { initialValue: 0 }]" @change="onTBSTypeChange">
+            <a-select v-decorator="['tbsType', { initialValue: null }]" @change="onTBSTypeChange" :disabled="!isTBSMode">
               <a-select-option value="0">iTBS</a-select-option>
               <a-select-option value="1">cTBS</a-select-option>
             </a-select>
@@ -112,22 +112,22 @@
         </a-col>
         <a-col :span="8">
           <a-form-item label='丛内频率(Hz)'>
-            <a-input-number v-decorator="['innerFreq', { initialValue: 50.0 }]" :min="0.1" :max="200" :step="0.1" style="width: 100%" disabled/>
+            <a-input-number v-decorator="['innerFreq', { initialValue: null }]" :min="0.1" :max="200" :step="0.1" style="width: 100%" disabled/>
           </a-form-item>
         </a-col>
         <a-col :span="8">
           <a-form-item label='丛内个数(个)'>
-            <a-input-number v-decorator="['innerCount', { initialValue: 3 }]" :min="1" :max="200" style="width: 100%" disabled/>
+            <a-input-number v-decorator="['innerCount', { initialValue: null }]" :min="1" :max="200" style="width: 100%" disabled/>
           </a-form-item>
         </a-col>
         <a-col :span="8">
           <a-form-item label='丛间频率(Hz)'>
-            <a-input-number v-decorator="['interFreq', { initialValue: 5.0 }]" :min="0.1" :max="200" :step="0.1" style="width: 100%" disabled/>
+            <a-input-number v-decorator="['interFreq', { initialValue: null }]" :min="0.1" :max="200" :step="0.1" style="width: 100%" disabled/>
           </a-form-item>
         </a-col>
         <a-col :span="8">
           <a-form-item label='丛间个数(个)'>
-            <a-input-number v-decorator="['interCount', { initialValue: 10 }]" :min="1" :max="200" style="width: 100%" disabled/>
+            <a-input-number v-decorator="['interCount', { initialValue: null }]" :min="1" :max="200" style="width: 100%" disabled/>
           </a-form-item>
         </a-col>
         <a-col :span="8">
@@ -148,7 +148,7 @@
 
 <script>
 import { getStimulationSiteOptions } from '@/utils/dict'
-import { validatePrescription, calculateRTMSTotalCount, calculateTBSTotalCount, getTBSDefaultParams } from '@/utils/prescriptionValidator'
+import { validatePrescription, calculateRTMSTotalCount, calculateTBSTotalCount, getTBSDefaultParams, getTBSCompliantParams } from '@/utils/prescriptionValidator'
 
 export default {
   name: 'PrescriptionAdd',
@@ -170,7 +170,8 @@ export default {
       form: this.$form.createForm(this),
       loading: false,
       selectedStandardPrescriptionName: '', // 新增：用于存储选中的标准处方名称
-      stimulationSiteOptions: []
+      stimulationSiteOptions: [],
+      isTBSMode: false // 是否为TBS模式
     }
   },
   async mounted () {
@@ -279,10 +280,36 @@ export default {
         this.autoCalculateTotalCount()
       }, 500) // 每500ms检查一次
     },
+    onPresTypeChange (value) {
+      const presType = parseInt(value)
+      this.isTBSMode = presType === 1
+      
+      if (presType === 0) {
+        // 普通处方模式：清空TBS相关字段
+        this.form.setFieldsValue({
+          tbsType: null,
+          innerFreq: null,
+          innerCount: null,
+          interFreq: null,
+          interCount: null
+        })
+      } else if (presType === 1) {
+        // TBS模式：设置默认TBS类型为iTBS，并设置符合验证规则的默认参数
+        this.form.setFieldsValue({
+          tbsType: 0
+        })
+        // 设置符合TBS验证规则的默认参数
+        const compliantParams = getTBSCompliantParams(0)
+        this.form.setFieldsValue(compliantParams)
+      }
+      
+      // 重新计算总脉冲数
+      this.autoCalculateTotalCount()
+    },
     onTBSTypeChange (value) {
-      // 根据TBS类型设置固定参数
-      const tbsParams = getTBSDefaultParams(parseInt(value))
-      this.form.setFieldsValue(tbsParams)
+      // 根据TBS类型设置符合验证规则的参数
+      const compliantParams = getTBSCompliantParams(parseInt(value))
+      this.form.setFieldsValue(compliantParams)
       // 重新计算总脉冲数
       this.autoCalculateTotalCount()
     },

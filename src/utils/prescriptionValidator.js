@@ -170,6 +170,11 @@ export function validateTBS(params) {
     return { valid: false, message: 'TBS模式刺激强度范围：1～60%' }
   }
 
+  // 检查TBS类型是否有效
+  if (tbsType === null || tbsType === undefined || (tbsType !== 0 && tbsType !== 1)) {
+    return { valid: false, message: 'TBS模式必须选择有效的TBS类型（iTBS或cTBS）' }
+  }
+
   if (innerFreq < 0.1 || innerFreq > CONFIG.MAX_FREQ) {
     return { valid: false, message: '丛内频率范围：0.1～200Hz' }
   }
@@ -345,6 +350,37 @@ export function getTBSDefaultParams(tbsType) {
   return {}
 }
 
+/**
+ * 获取符合TBS验证规则的默认处方参数
+ * @param {number} tbsType - TBS类型（0:iTBS, 1:cTBS）
+ * @returns {Object} 符合TBS验证规则的默认参数
+ */
+export function getTBSCompliantParams(tbsType) {
+  const tbsParams = getTBSDefaultParams(tbsType)
+  
+  if (tbsType === 0) { // iTBS
+    return {
+      presStrength: 50, // TBS模式刺激强度范围：1～60%
+      presFreq: 5, // 丛间频率
+      lastTime: 2, // 单次刺激时长（秒）
+      pauseTime: 8, // iTBS最小间歇时间
+      repeatCount: 1, // 重复次数
+      ...tbsParams
+    }
+  } else if (tbsType === 1) { // cTBS
+    return {
+      presStrength: 50, // TBS模式刺激强度范围：1～60%
+      presFreq: 5, // 丛间频率
+      lastTime: 40, // 单次刺激时长（秒）：200个脉冲 / 5Hz = 40秒
+      pauseTime: 0, // cTBS间歇时间必须为0秒
+      repeatCount: 1, // 重复次数
+      ...tbsParams
+    }
+  }
+  
+  return {}
+}
+
 export default {
   validateRTMS,
   validateTBS,
@@ -353,5 +389,6 @@ export default {
   calculateRTMSTotalCount,
   calculateTBSTotalCount,
   getTBSDefaultParams,
+  getTBSCompliantParams,
   getMaxStrength
 } 
