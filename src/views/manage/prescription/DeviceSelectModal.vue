@@ -112,9 +112,21 @@ export default {
         { title: 'SN码', dataIndex: 'sn', key: 'sn' },
         { title: '状态', dataIndex: 'status', key: 'status', scopedSlots: { customRender: 'status' } },
         { title: '最后心跳时间', dataIndex: 'lastHeartbeat', key: 'lastHeartbeat' },
-        { title: '预留字段1', dataIndex: 'extendField1', key: 'extendField1' },
-        { title: '预留字段2', dataIndex: 'extendField2', key: 'extendField2' },
-        { title: '预留字段3', dataIndex: 'extendField3', key: 'extendField3' }
+        { title: '设备编号', dataIndex: 'deviceNo', key: 'deviceNo' },
+        { title: '拍子使用次数', dataIndex: 'batTimes', key: 'batTimes' },
+        { title: '电容使用次数', dataIndex: 'capTimes', key: 'capTimes' },
+        { 
+          title: '治疗状态', 
+          dataIndex: 'treatmentStatus', 
+          key: 'treatmentStatus',
+          customRender: (text) => {
+            if (text === 1) {
+              return <a-tag color="green">刺激状态</a-tag>
+            } else {
+              return <a-tag color="red">非刺激状态</a-tag>
+            }
+          }
+        }
       ],
       hospitalDict
     }

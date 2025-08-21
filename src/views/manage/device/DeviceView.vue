@@ -24,9 +24,16 @@
       </a-row>
       <br/>
       <a-row style="padding-left: 24px;padding-right: 24px;">
-        <a-col :span="8"><b>预留字段1：</b>{{ deviceData.extendField1 }}</a-col>
-        <a-col :span="8"><b>预留字段2：</b>{{ deviceData.extendField2 }}</a-col>
-        <a-col :span="8"><b>预留字段3：</b>{{ deviceData.extendField3 }}</a-col>
+        <a-col :span="8"><b>设备编号：</b>{{ deviceData.deviceNo || 0 }}</a-col>
+        <a-col :span="8"><b>拍子使用次数：</b>{{ deviceData.batTimes || 0 }}</a-col>
+        <a-col :span="8"><b>电容使用次数：</b>{{ deviceData.capTimes || 0 }}</a-col>
+      </a-row>
+      <br/>
+      <a-row style="padding-left: 24px;padding-right: 24px;">
+        <a-col :span="8"><b>治疗状态：</b>
+          <a-tag v-if="deviceData.treatmentStatus === 1" color="green">刺激状态</a-tag>
+          <a-tag v-else color="red">非刺激状态</a-tag>
+        </a-col>
       </a-row>
     </div>
   </a-modal>

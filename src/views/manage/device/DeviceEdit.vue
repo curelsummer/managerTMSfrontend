@@ -21,20 +21,27 @@
             <a-input v-decorator="['sn', { rules: [{ required: true, message: '请输入SN码!' }] }]"/>
           </a-form-item>
         </a-col>
-        <!-- 状态字段已移除 -->
         <a-col :span="12">
-          <a-form-item label='预留字段1'>
-            <a-input v-decorator="['extendField1']"/>
+          <a-form-item label='设备编号'>
+            <a-input-number v-decorator="['deviceNo', { min: 0 }]" style="width: 100%"/>
           </a-form-item>
         </a-col>
         <a-col :span="12">
-          <a-form-item label='预留字段2'>
-            <a-input v-decorator="['extendField2']"/>
+          <a-form-item label='拍子使用次数'>
+            <a-input-number v-decorator="['batTimes', { min: 0 }]" style="width: 100%"/>
           </a-form-item>
         </a-col>
         <a-col :span="12">
-          <a-form-item label='预留字段3'>
-            <a-input v-decorator="['extendField3']"/>
+          <a-form-item label='电容使用次数'>
+            <a-input-number v-decorator="['capTimes', { min: 0 }]" style="width: 100%"/>
+          </a-form-item>
+        </a-col>
+        <a-col :span="12">
+          <a-form-item label='治疗状态'>
+            <a-radio-group v-decorator="['treatmentStatus']">
+              <a-radio :value="0">非刺激状态</a-radio>
+              <a-radio :value="1">刺激状态</a-radio>
+            </a-radio-group>
           </a-form-item>
         </a-col>
       </a-row>
@@ -69,7 +76,7 @@ export default {
     setFormValues (row) {
       this.rowId = row.deviceId
       let obj = {}
-      let fields = ['hospitalId', 'deviceType', 'sn', 'extendField1', 'extendField2', 'extendField3']
+      let fields = ['hospitalId', 'deviceType', 'sn', 'deviceNo', 'batTimes', 'capTimes', 'treatmentStatus']
       fields.forEach(key => {
         obj[key] = row[key]
       })

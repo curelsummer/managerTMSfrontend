@@ -22,18 +22,26 @@
           </a-form-item>
         </a-col>
         <a-col :span="12">
-          <a-form-item label='预留字段1'>
-            <a-input v-decorator="['extendField1']"/>
+          <a-form-item label='设备编号'>
+            <a-input-number v-decorator="['deviceNo', { initialValue: 0, min: 0 }]" style="width: 100%"/>
           </a-form-item>
         </a-col>
         <a-col :span="12">
-          <a-form-item label='预留字段2'>
-            <a-input v-decorator="['extendField2']"/>
+          <a-form-item label='拍子使用次数'>
+            <a-input-number v-decorator="['batTimes', { initialValue: 0, min: 0 }]" style="width: 100%"/>
           </a-form-item>
         </a-col>
         <a-col :span="12">
-          <a-form-item label='预留字段3'>
-            <a-input v-decorator="['extendField3']"/>
+          <a-form-item label='电容使用次数'>
+            <a-input-number v-decorator="['capTimes', { initialValue: 0, min: 0 }]" style="width: 100%"/>
+          </a-form-item>
+        </a-col>
+        <a-col :span="12">
+          <a-form-item label='治疗状态'>
+            <a-radio-group v-decorator="['treatmentStatus', { initialValue: 0 }]">
+              <a-radio :value="0">非刺激状态</a-radio>
+              <a-radio :value="1">刺激状态</a-radio>
+            </a-radio-group>
           </a-form-item>
         </a-col>
       </a-row>

@@ -110,9 +110,20 @@ export default {
           scopedSlots: { customRender: 'status' }
         },
         { title: '最后心跳时间', dataIndex: 'lastHeartbeat' },
-        { title: '预留字段1', dataIndex: 'extendField1' },
-        { title: '预留字段2', dataIndex: 'extendField2' },
-        { title: '预留字段3', dataIndex: 'extendField3' },
+        { title: '设备编号', dataIndex: 'deviceNo' },
+        { title: '拍子使用次数', dataIndex: 'batTimes' },
+        { title: '电容使用次数', dataIndex: 'capTimes' },
+        { 
+          title: '治疗状态', 
+          dataIndex: 'treatmentStatus',
+          customRender: (text) => {
+            if (text === 1) {
+              return <a-tag color="green">刺激状态</a-tag>
+            } else {
+              return <a-tag color="red">非刺激状态</a-tag>
+            }
+          }
+        },
         { title: '操作', dataIndex: 'operation', scopedSlots: { customRender: 'operation' } }
       ]
     }
@@ -180,10 +191,17 @@ export default {
       this.ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          if (data.deviceId && data.status) {
+          if (data.deviceId) {
             const device = this.dataSource.find(d => d.deviceId === data.deviceId);
             if (device) {
-              this.$set(device, 'status', data.status);
+              // 更新设备状态
+              if (data.status) {
+                this.$set(device, 'status', data.status);
+              }
+              // 更新治疗状态
+              if (data.treatmentStatus !== undefined) {
+                this.$set(device, 'treatmentStatus', data.treatmentStatus);
+              }
             }
           }
         } catch (e) {
