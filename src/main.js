@@ -6,8 +6,13 @@ import store from './store'
 import request from 'utils/request'
 import db from 'utils/localstorage'
 import VueApexCharts from 'vue-apexcharts'
+import moment from 'moment'
 
 import 'ant-design-vue/dist/antd.css'
+import 'moment/locale/zh-cn'
+
+// 配置 moment.js 为中文
+moment.locale('zh-cn')
 
 import 'utils/install'
 
@@ -38,6 +43,7 @@ Vue.prototype.$download = request.download
 Vue.prototype.$upload = request.upload
 Vue.prototype.$postJson = request.postJson
 Vue.prototype.$putJson = request.putJson
+Vue.prototype.$moment = moment
 
 /* eslint-disable no-new */
 new Vue({
