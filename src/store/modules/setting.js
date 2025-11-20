@@ -13,7 +13,7 @@ export default {
     theme: db.get('THEME', 'light'),
     layout: db.get('LAYOUT', 'side'),
     systemName: 'TMS设备管理系统',
-    copyright: `${new Date().getFullYear()} <a>fank</a>`,
+    copyright: `${new Date().getFullYear()} <a href="http://jiangxijielian.com/" target="_blank">江西杰联医疗设备有限公司</a>`,
     multipage: getBooleanValue(db.get('MULTIPAGE'), true),
     fixSiderbar: getBooleanValue(db.get('FIX_SIDERBAR'), true),
     fixHeader: getBooleanValue(db.get('FIX_HEADER'), true),

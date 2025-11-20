@@ -35,17 +35,22 @@ let asyncRouter
 router.beforeEach((to, from, next) => {
   if (whiteList.indexOf(to.path) !== -1) {
     next()
+    return
   }
   let token = db.get('USER_TOKEN')
   let user = db.get('USER')
   let userRouter = get('USER_ROUTER')
-  if (token.length && user) {
+  if (token && token.length && user) {
     if (!asyncRouter) {
       if (!userRouter) {
         request.get(`menu/${user.username}`).then((res) => {
           asyncRouter = res.data
           save('USER_ROUTER', asyncRouter)
           go(to, next)
+        }).catch((err) => {
+          console.error('获取菜单失败:', err)
+          db.clear()
+          next('/login')
         })
       } else {
         asyncRouter = userRouter
