@@ -1,4 +1,5 @@
 import db from 'utils/localstorage'
+import { updateTheme } from 'utils/color'
 
 export default {
   namespaced: true,
@@ -59,9 +60,29 @@ export default {
     setSettingBar (state, flag) {
       state.settingBar.opened = flag
     },
+    // 仅保存颜色到 state 和本地存储，不触发主题更新
     setColor (state, color) {
       db.save('COLOR', color)
       state.color = color
+    }
+  },
+  actions: {
+    // 更新颜色并显示加载提示（用于用户手动更改颜色）
+    updateColorWithNotification ({ commit }, color) {
+      return updateTheme(color, false).then(() => {
+        commit('setColor', color)
+      })
+    },
+    // 静默更新颜色和主题（用于登录、配置自动同步等场景）
+    updateColorSilent ({ commit }, color) {
+      // 先保存颜色到 store
+      commit('setColor', color)
+      // 在下一个事件循环中异步更新主题，不阻塞初始化流程
+      setTimeout(() => {
+        updateTheme(color, true).catch(err => {
+          console.warn('静默更新主题失败:', err)
+        })
+      }, 0)
     }
   }
 }

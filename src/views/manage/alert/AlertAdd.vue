@@ -20,7 +20,7 @@
             </a-select>
           </a-form-item>
         </a-col>
-        <a-col :span="12">
+        <a-col :span="12">l
           <a-form-item label='报警类型' v-bind="formItemLayout">
             <a-radio-group
               button-style="solid"

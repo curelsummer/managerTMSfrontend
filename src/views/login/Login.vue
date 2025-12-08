@@ -110,8 +110,7 @@ export default {
       setLayout: 'setting/setLayout',
       setMultipage: 'setting/setMultipage',
       fixSiderbar: 'setting/fixSiderbar',
-      fixHeader: 'setting/fixHeader',
-      setColor: 'setting/setColor'
+      fixHeader: 'setting/fixHeader'
     }),
     saveLoginData (data) {
       this.setToken(data.token)
@@ -124,7 +123,8 @@ export default {
       this.setMultipage(data.config.multiPage === '1')
       this.fixSiderbar(data.config.fixSiderbar === '1')
       this.fixHeader(data.config.fixHeader === '1')
-      this.setColor(data.config.color)
+      // 登录时静默应用主题颜色，不显示加载提示（使用 action 异步处理）
+      this.$store.dispatch('setting/updateColorSilent', data.config.color)
     }
   }
 }

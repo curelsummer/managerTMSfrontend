@@ -47,7 +47,6 @@ import SettingItem from './SettingItem'
 import StyleItem from './StyleItem'
 import ColorCheckbox from '../checkbox/ColorCheckbox'
 import ImgCheckbox from '../checkbox/ImgCheckbox'
-import { updateTheme } from 'utils/color'
 import {mapState, mapMutations} from 'vuex'
 
 const ColorCheckboxGroup = ColorCheckbox.Group
@@ -86,8 +85,10 @@ export default {
     ...mapMutations({setSettingBar: 'setting/setSettingBar'}),
     onColorChange (values, colors) {
       if (colors.length > 0) {
-        updateTheme(colors)
-        this.$store.commit('setting/setColor', colors)
+        // 用户手动更改颜色时显示加载提示
+        this.$store.dispatch('setting/updateColorWithNotification', colors).catch(err => {
+          console.error('主题更新失败:', err)
+        })
       }
     },
     setTheme (values) {

@@ -28,7 +28,8 @@
               </a-select>
             </a-form-item>
           </a-col>
-          <a-col :md="6" :sm="24">
+          <!-- 状态字段已隐藏 -->
+          <!-- <a-col :md="6" :sm="24">
             <a-form-item label="状态" :labelCol="{span: 5}" :wrapperCol="{span: 18, offset: 1}">
               <a-select v-model="queryParams.status" placeholder="请选择状态" allowClear>
                 <a-select-option value="0">草稿</a-select-option>
@@ -38,7 +39,7 @@
                 <a-select-option value="4">异常</a-select-option>
               </a-select>
             </a-form-item>
-          </a-col>
+          </a-col> -->
           <a-col :md="8" :sm="24">
             <a-form-item label="治疗部位" :labelCol="{span: 5}" :wrapperCol="{span: 18, offset: 1}">
               <a-select 
@@ -61,7 +62,7 @@
           </a-col>
           <span style="float: right; margin-top: 3px;">
             <a-button type="primary" @click="search">查询</a-button>
-            <a-button style="margin-left: 8px" @click="reset">重置</a-button>
+            <a-button style="margin-left: 8px" @click="reset">刷新</a-button>
           </span>
         </a-row>
       </a-form>
@@ -340,6 +341,10 @@
                 <span v-else>{{ record.totalTime }} 秒</span>
               </div>
               <div class="param-item">
+                <label>使用次数：</label>
+                <span>{{ record.usageCount || 0 }} 次</span>
+              </div>
+              <div class="param-item">
                 <label>标准处方：</label>
                 <div v-if="record.editing" style="display: flex; align-items: center; width: 100%;">
                   <a-input 
@@ -573,11 +578,18 @@ export default {
           width: 120,
           scopedSlots: { customRender: 'standardPresName' }
         },
-        {
-          title: '状态',
-          dataIndex: 'status',
-          width: 80,
-          scopedSlots: { customRender: 'status' }
+        // 状态列已隐藏
+        // {
+        //   title: '状态',
+        //   dataIndex: 'status',
+        //   width: 80,
+        //   scopedSlots: { customRender: 'status' }
+        // },
+        { 
+          title: '使用次数', 
+          dataIndex: 'usageCount', 
+          width: 90,
+          align: 'center'
         },
         { title: '创建时间', dataIndex: 'createTime', width: 120 },
         { title: '操作', dataIndex: 'operation', width: 220, fixed: 'right', scopedSlots: { customRender: 'operation' } }

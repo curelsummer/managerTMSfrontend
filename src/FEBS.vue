@@ -23,6 +23,12 @@ export default {
     enquireScreen(isMobile => {
       _this.$store.commit('setting/setDevice', isMobile)
     })
+    
+    // 初始化时静默应用主题颜色（如果已保存）
+    const savedColor = this.$store.state.setting.color
+    if (savedColor) {
+      this.$store.dispatch('setting/updateColorSilent', savedColor)
+    }
   }
 }
 </script>

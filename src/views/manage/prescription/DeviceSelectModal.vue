@@ -201,11 +201,11 @@ export default {
         return
       }
       
-      // 检查设备状态，只有在线设备才能下发
-      if (this.selectedDevice.status !== 'online') {
-        this.$message.error('只能选择在线状态的设备进行下发')
-        return
-      }
+      // 已移除设备在线状态检查，允许离线设备也可以下发处方
+      // if (this.selectedDevice.status !== 'online') {
+      //   this.$message.error('只能选择在线状态的设备进行下发')
+      //   return
+      // }
       
       this.loading = true
       // 触发父组件的设备选择完成事件
