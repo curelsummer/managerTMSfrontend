@@ -481,13 +481,6 @@
       @patientSelected="handlePatientSelected"
       @cancel="handlePatientSelectCancel"
     />
-    
-    <!-- 设备选择弹窗 -->
-    <device-select-modal
-      :visible="deviceSelectModal.visible"
-      @deviceSelected="handleDeviceSelected"
-      @cancel="handleDeviceSelectCancel"
-    />
   </a-card>
 </template>
 
@@ -497,12 +490,11 @@ import prescriptionEdit from './PrescriptionEdit.vue'
 import prescriptionView from './PrescriptionView.vue'
 import StandardPrescriptionModal from './StandardPrescriptionModal.vue'
 import PatientSelectModal from './PatientSelectModal.vue'
-import DeviceSelectModal from './DeviceSelectModal.vue'
 import { hospitalDict, getStimulationSiteName, loadStimulationSiteData, getStimulationSiteOptions } from '@/utils/dict'
 import { validatePrescription, calculateRTMSTotalCount, calculateTBSTotalCount, getTBSDefaultParams, getTBSCompliantParams } from '@/utils/prescriptionValidator'
 export default {
   name: 'Prescription',
-  components: { prescriptionAdd, prescriptionEdit, prescriptionView, StandardPrescriptionModal, PatientSelectModal, DeviceSelectModal },
+  components: { prescriptionAdd, prescriptionEdit, prescriptionView, StandardPrescriptionModal, PatientSelectModal },
   data () {
     return {
       prescriptionAdd: { visiable: false },
@@ -510,10 +502,8 @@ export default {
       prescriptionView: { visiable: false, data: null },
       standardPrescriptionModal: { visible: false },
       patientSelectModal: { visible: false },
-      deviceSelectModal: { visible: false },
       currentDispatchPrescription: null, // 当前要下发的处方
       selectedPatient: null, // 选中的患者
-      selectedDevice: null, // 选中的设备
       currentEditingRow: null, // 当前正在编辑的行
       queryParams: {},
       dataSource: [],
@@ -988,29 +978,16 @@ export default {
       this.patientSelectModal.visible = true
     },
     
-    // 患者选择完成
-    handlePatientSelected (patient) {
+    // 患者选择完成（广播模式）
+    async handlePatientSelected (patient) {
       this.selectedPatient = patient
       this.patientSelectModal.visible = false
       
-      // 更新处方表中的患者ID
-      this.currentDispatchPrescription.patientId = patient.id
-      
-      // 显示设备选择弹窗
-      this.deviceSelectModal.visible = true
-    },
-    
-    // 设备选择完成
-    async handleDeviceSelected (device) {
-      this.selectedDevice = device
-      this.deviceSelectModal.visible = false
-      
       try {
-        // 1. 更新prescription表中的患者ID和设备ID
+        // 1. 更新prescription表中的患者ID，状态设为已下发
         const prescriptionUpdateData = {
           id: this.currentDispatchPrescription.id,
-          patientId: this.selectedPatient.id,
-          deviceId: device.deviceId,
+          patientId: patient.id,
           status: 1, // 处方状态设为已下发
           // 保持其他字段不变
           hospitalId: this.currentDispatchPrescription.hospitalId,
@@ -1039,13 +1016,13 @@ export default {
         
         await this.$putJson('/prescription', prescriptionUpdateData)
         
-        // 2. 创建prescription_execution记录，状态设为0（待下发）
+        // 2. 创建prescription_execution记录，广播模式（不传deviceId）
         const executionData = {
-          patientId: this.selectedPatient.id,
-          deviceId: device.deviceId,
+          patientId: patient.id,
           prescriptionId: this.currentDispatchPrescription.id,
+          // 不传 deviceId，广播模式
           status: 0, // 待下发
-          progress: '处方已创建，等待下发'
+          progress: '处方已广播，等待护士认领'
         }
         
         const res = await this.$postJson('/prescription-execution', executionData)
@@ -1055,23 +1032,9 @@ export default {
         const responseData = res.data || res
         
         if (responseData && responseData.success === true) {
-          this.$message.success('处方下发成功！')
-          // 跳转到处方执行页面
-          console.log('当前路由信息:', this.$route)
-          console.log('尝试跳转到处方执行页面')
-          
-          // 检查所有可用路由
-          console.log('所有路由:', this.$router.getRoutes())
-          
-          // 尝试跳转到处方执行页面
-          this.$router.push('/manage/prescriptionexecution').then(() => {
-            console.log('跳转成功，刷新页面')
-            // 跳转成功后刷新页面
-            window.location.reload()
-          }).catch(err => {
-            console.error('跳转失败:', err)
-            this.$message.warning('跳转失败，请手动导航到处方执行页面')
-          })
+          this.$message.success('处方已广播到所有设备，等待护士认领')
+          // 刷新列表
+          this.search()
         } else {
           const errorMsg = responseData && responseData.message ? responseData.message : '未知错误'
           this.$message.error('处方下发失败：' + errorMsg)
@@ -1084,7 +1047,6 @@ export default {
       // 清空选择状态
       this.currentDispatchPrescription = null
       this.selectedPatient = null
-      this.selectedDevice = null
     },
     
     // 取消患者选择
@@ -1092,14 +1054,6 @@ export default {
       this.patientSelectModal.visible = false
       this.currentDispatchPrescription = null
       this.selectedPatient = null
-    },
-    
-    // 取消设备选择
-    handleDeviceSelectCancel () {
-      this.deviceSelectModal.visible = false
-      this.currentDispatchPrescription = null
-      this.selectedPatient = null
-      this.selectedDevice = null
     }
   },
   async mounted () {

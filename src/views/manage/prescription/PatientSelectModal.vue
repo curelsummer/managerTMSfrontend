@@ -1,6 +1,6 @@
 <template>
   <a-modal
-    title="选择患者"
+    title="处方下发（广播模式）"
     :visible="visible"
     :confirmLoading="loading"
     @ok="handleOk"
@@ -8,6 +8,15 @@
     width="1000px"
     :maskClosable="false"
   >
+    <!-- 广播模式提示 -->
+    <a-alert 
+      type="info"
+      message="处方将广播到所有在线设备，由护士在设备端自行认领"
+      :closable="false"
+      show-icon
+      style="margin-bottom: 16px;"
+    />
+    
     <div class="search-area">
       <a-row :gutter="16">
         <a-col :span="8">
