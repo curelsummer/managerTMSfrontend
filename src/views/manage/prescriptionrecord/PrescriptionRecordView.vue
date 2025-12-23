@@ -79,9 +79,18 @@
           <a-col :span="8">
             <div class="info-item">
               <label>患者编号:</label>
-              <span>{{ recordData.patientNo }}</span>
+              <span>{{ recordData.patientNo || '-' }}</span>
             </div>
           </a-col>
+          <a-col :span="8">
+            <div class="info-item">
+              <label>患者唯一标识:</label>
+              <span>{{ recordData.patientIdentifier || '-' }}</span>
+            </div>
+          </a-col>
+        </a-row>
+        
+        <a-row :gutter="16">
           <a-col :span="8">
             <div class="info-item">
               <label>医生姓名:</label>
@@ -177,7 +186,89 @@
             <h4>MEP记录 #{{ mepRecord.id }}</h4>
             <div class="mep-record-info">
               <span><strong>类型:</strong> {{ getMepTypeText(mepRecord.dType) }}</span>
-              <span><strong>时间:</strong> {{ formatDateTime(mepRecord.inTime) }}</span>
+              <span><strong>记录时间:</strong> {{ formatDateTime(mepRecord.recordTime) }}</span>
+              <span v-if="mepRecord.treatmentRecordId"><strong>关联治疗记录ID:</strong> {{ mepRecord.treatmentRecordId }}</span>
+              <span v-else><strong>状态:</strong> <a-tag color="orange">独立记录</a-tag></span>
+            </div>
+            <div class="mep-record-details" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #f0f0f0;">
+              <a-row :gutter="16">
+                <a-col :span="12">
+                  <div class="info-item">
+                    <label>患者唯一标识:</label>
+                    <span>{{ mepRecord.patientIdentifier || '-' }}</span>
+                  </div>
+                </a-col>
+                <a-col :span="12">
+                  <div class="info-item">
+                    <label>服务器记录ID:</label>
+                    <span>{{ mepRecord.serverRecordId || '-' }}</span>
+                  </div>
+                </a-col>
+              </a-row>
+              <a-row :gutter="16">
+                <a-col :span="12">
+                  <div class="info-item">
+                    <label>设备本地MEP记录ID:</label>
+                    <span>{{ mepRecord.localMepRecordId || '-' }}</span>
+                  </div>
+                </a-col>
+                <a-col :span="12">
+                  <div class="info-item">
+                    <label>设备ID:</label>
+                    <span>{{ mepRecord.deviceId || '-' }}</span>
+                  </div>
+                </a-col>
+              </a-row>
+              <a-row :gutter="16">
+                <a-col :span="12">
+                  <div class="info-item">
+                    <label>设备编号:</label>
+                    <span>{{ mepRecord.deviceNo || '-' }}</span>
+                  </div>
+                </a-col>
+                <a-col :span="12">
+                  <div class="info-item">
+                    <label>来源设备编号:</label>
+                    <span>{{ mepRecord.sourceDeviceNo || '-' }}</span>
+                  </div>
+                </a-col>
+              </a-row>
+              <a-row :gutter="16">
+                <a-col :span="12">
+                  <div class="info-item">
+                    <label>患者姓名:</label>
+                    <span>{{ mepRecord.patientName || '-' }}</span>
+                  </div>
+                </a-col>
+                <a-col :span="12">
+                  <div class="info-item">
+                    <label>患者性别:</label>
+                    <span>{{ mepRecord.patientSex || '-' }}</span>
+                  </div>
+                </a-col>
+              </a-row>
+              <a-row :gutter="16">
+                <a-col :span="12">
+                  <div class="info-item">
+                    <label>患者年龄:</label>
+                    <span>{{ mepRecord.patientAgeStr || '-' }}</span>
+                  </div>
+                </a-col>
+                <a-col :span="12">
+                  <div class="info-item">
+                    <label>患者出生日期:</label>
+                    <span>{{ mepRecord.patientBirthday || '-' }}</span>
+                  </div>
+                </a-col>
+              </a-row>
+              <a-row :gutter="16" v-if="mepRecord.timestamp">
+                <a-col :span="12">
+                  <div class="info-item">
+                    <label>上传时间戳:</label>
+                    <span>{{ formatDateTime(mepRecord.timestamp) }}</span>
+                  </div>
+                </a-col>
+              </a-row>
             </div>
           </div>
           
@@ -323,6 +414,10 @@ export default {
     
     formatDateTime (dateTimeStr) {
       if (!dateTimeStr) return '-'
+      // 如果是数字（时间戳），使用 moment 的时间戳格式化
+      if (typeof dateTimeStr === 'number') {
+        return this.$moment(dateTimeStr).format('YYYY-MM-DD HH:mm:ss')
+      }
       return this.$moment(dateTimeStr).format('YYYY-MM-DD HH:mm:ss')
     }
   }

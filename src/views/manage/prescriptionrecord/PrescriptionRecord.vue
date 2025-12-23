@@ -191,11 +191,12 @@
                >
                  <div v-for="mepRecord in record.mepRecords" :key="mepRecord.id" class="mep-record">
                    <div class="mep-record-header">
-                     <h4>MEP记录 #{{ mepRecord.id }}</h4>
-                     <div class="mep-record-info">
-                       <span><strong>类型:</strong> {{ getMepTypeText(mepRecord.dType) }}</span>
-                       <span><strong>时间:</strong> {{ formatDateTime(mepRecord.inTime) }}</span>
-                     </div>
+                     <span class="mep-header-item">MEP记录 #{{ mepRecord.id }}</span>
+                     <span class="mep-header-item">记录时间: {{ formatDateTime(mepRecord.recordTime) }}</span>
+                     <span v-if="!mepRecord.treatmentRecordId" class="mep-header-item">状态: <a-tag color="orange" style="margin: 0;">独立记录</a-tag></span>
+                     <span class="mep-header-item">服务器记录ID: {{ mepRecord.serverRecordId || '-' }}</span>
+                     <span class="mep-header-item">设备ID: {{ mepRecord.deviceId || '-' }}</span>
+                     <span class="mep-header-item">设备编号: {{ mepRecord.deviceNo || '-' }}</span>
                    </div>
                    
                    <a-table 
@@ -260,6 +261,7 @@ export default {
         { title: '记录ID', dataIndex: 'id', width: 80 },
         { title: '患者姓名', dataIndex: 'patientName', width: 100 },
         { title: '患者ID', dataIndex: 'patientId', width: 80 },
+        { title: '患者唯一标识', dataIndex: 'patientIdentifier', width: 150 },
         { 
           title: '性别', 
           dataIndex: 'patientSex',
@@ -495,6 +497,10 @@ export default {
     
     formatDateTime (dateTimeStr) {
       if (!dateTimeStr) return '-'
+      // 如果是数字（时间戳），使用 moment 的时间戳格式化
+      if (typeof dateTimeStr === 'number') {
+        return this.$moment(dateTimeStr).format('YYYY-MM-DD HH:mm:ss')
+      }
       return this.$moment(dateTimeStr).format('YYYY-MM-DD HH:mm:ss')
     },
     
@@ -614,11 +620,22 @@ export default {
 
 .mep-record-header {
   display: flex;
-  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
   margin-bottom: 12px;
   padding-bottom: 8px;
   border-bottom: 1px solid #f0f0f0;
   font-size: 13px;
+  line-height: 1.5;
+}
+
+.mep-header-item {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+  color: #333;
+  white-space: nowrap;
 }
 
 .no-data-tip {
